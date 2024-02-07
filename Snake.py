@@ -27,10 +27,12 @@ class Window:
         self.squares = []
         self.food = None
         self.food_square = None
-        self.bind_actions()
+        self.game_finished = False
         self.init_elements()
+        self.bind_actions()
         self.render_elements()
         self.next_turn()
+
 
     def Configuration(self):
         self.window.resizable(False, False)  # Can be changed later on
@@ -72,6 +74,7 @@ class Window:
         self.window.bind('<Down>', lambda event: self.snake.change_direction('down'))
 
     def game_over(self):
+        del self.food
         for square in self.squares:
             self.canvas.delete(square)
         self.canvas.delete(self.food_square)
@@ -80,40 +83,42 @@ class Window:
 
 
     def next_turn(self):
-        x, y = self.snake.coordinates[-1][0], self.snake.coordinates[-1][1]
-        if self.snake.direction == "up":
-            y -= SPACE_SIZE
-        if self.snake.direction == "down":
-            y += SPACE_SIZE
-        if self.snake.direction == "left":
-            x -= SPACE_SIZE
-        if self.snake.direction == "right":
-            x += SPACE_SIZE
-
-        self.snake.coordinates.append((x, y))
-
-        square = self.canvas.create_rectangle(x, y, x + SPACE_SIZE, y + SPACE_SIZE, fill=self.snake.color, tags='Snake')
-        self.squares.append(square)
-        if self.snake.if_eaten(self.food):
-            self.score += 1
-            self.label.config(text=f'Score:{self.score}')
-            self.canvas.delete('Food')
-            self.food = Food()
-            self.food.find_possible_position(self.snake)
-            self.food_square = self.canvas.create_oval(self.food.x, self.food.y, self.food.x + SPACE_SIZE,
-                                                       self.food.y + SPACE_SIZE, fill=self.food.color, tags='Food')
-        else:
-            self.snake.coordinates = self.snake.coordinates[1:]
-            self.canvas.delete(self.squares[0])
-            self.squares = self.squares[1:]
-        if self.snake.check_collisions():
+        if self.game_finished:
             self.game_over()
-        self.window.after(SPEED, self.next_turn)
+        else:
+            x, y = self.snake.coordinates[-1][0], self.snake.coordinates[-1][1]
+            if self.snake.direction == "up":
+                y -= SPACE_SIZE
+            if self.snake.direction == "down":
+                y += SPACE_SIZE
+            if self.snake.direction == "left":
+                x -= SPACE_SIZE
+            if self.snake.direction == "right":
+                x += SPACE_SIZE
+
+            self.snake.coordinates.append((x, y))
+            square = self.canvas.create_rectangle(x, y, x + SPACE_SIZE, y + SPACE_SIZE, fill=self.snake.color,
+                                                  tags='Snake')
+            self.squares.append(square)
+            if self.snake.if_eaten(self.food):
+                self.score += 1
+                self.label.config(text=f'Score:{self.score}')
+                self.canvas.delete('Food')
+                self.food = Food()
+                self.food.find_possible_position(self.snake)
+                self.food_square = self.canvas.create_oval(self.food.x, self.food.y, self.food.x + SPACE_SIZE,
+                                                           self.food.y + SPACE_SIZE, fill=self.food.color, tags='Food')
+            else:
+                self.snake.coordinates = self.snake.coordinates[1:]
+                self.canvas.delete(self.squares[0])
+                self.squares = self.squares[1:]
+            if self.snake.check_collisions():
+                self.game_finished = True
+            self.window.after(SPEED, self.next_turn)
 
 
 class Snake:
     def __init__(self):
-        self.body_size = BODY_PARTS
         self.coordinates = [[0, 0] for _ in range(BODY_PARTS)]
         self.direction = 'down'
         self.color = SNAKE_COLOR
@@ -143,6 +148,10 @@ class Snake:
             return True
         return False
 
+    # def __del__(self):
+    #     self.coordinates = None
+    #     self.direction = None
+
 
 class Food:
     def __init__(self):
@@ -154,6 +163,10 @@ class Food:
         while [self.x, self.y] in snake.coordinates:
             self.x = random.randint(0, DIMENSION_X - 1) * SPACE_SIZE
             self.y = random.randint(0, DIMENSION_Y - 1) * SPACE_SIZE
+
+    def __del__(self):
+        self.x = None
+        self.y = None
 
 
 def main():
